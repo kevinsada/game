@@ -9,15 +9,16 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
-class FetchQuestion implements ShouldBroadcast
+class QuestionEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $user;
     public $question;
 
-    public function __construct(User $user, $question)
+    public function __construct($user, $question)
     {
         $this->user = $user;
         $this->question = $question;
@@ -27,19 +28,17 @@ class FetchQuestion implements ShouldBroadcast
     {
         // This must always be an array. Since it will be parsed with json_encode()
         return [
-            'user' => $this->user->name,
-            'question' => $this->question,
+            'data' => $this->question,
         ];
     }
 
     public function broadcastAs()
     {
-        return 'game';
+        return 'newQuestion';
     }
 
     public function broadcastOn()
     {
-        return ['game'];
-
+        return new Channel("quiz." . $this->user->id);
     }
 }

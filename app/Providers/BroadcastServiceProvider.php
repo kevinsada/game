@@ -14,6 +14,11 @@ class BroadcastServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Broadcast::channel('quiz.1', function ($user, $userId) {
+            return true;
+        });
+
+
         Broadcast::routes();
         require base_path('routes/channels.php');
     }

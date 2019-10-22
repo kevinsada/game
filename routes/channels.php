@@ -12,7 +12,11 @@
 */
 
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
-Broadcast::channel('user.game', function ($user, $question) {
-    return [$user, $question];
+Broadcast::channel('quiz.1', function () {
+    Log::info('FUBARRRR');
+    $userId = auth()->id();
+    return true;
+//    return $userId === $id->id;
 });
