@@ -1873,6 +1873,7 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! axios */ "./node_modules/axios/index.js");
 /* harmony import */ var axios__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(axios__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _event__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../event */ "./resources/js/event.js");
 //
 //
 //
@@ -1909,6 +1910,10 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+
 
 /* harmony default export */ __webpack_exports__["default"] = ({
   props: {
@@ -1931,7 +1936,7 @@ __webpack_require__.r(__webpack_exports__);
       },
       difficulty: '',
       answers: null,
-      count: 0,
+      count: 1,
       questionPoints: 0,
       totalPoints: 0,
       countdown: 10
@@ -1949,57 +1954,39 @@ __webpack_require__.r(__webpack_exports__);
         }, 1000);
       }
 
-      if (this.countdown === -1) {
-        alert("you have failed");
+      if (this.countdown === 0) {
+        alert("You have failed to answer this question");
         this.failedToAnswer();
       }
     },
-    failedToAnswer: function failedToAnswer() {},
-    fetchQuestion: function fetchQuestion() {
+    failedToAnswer: function failedToAnswer() {
       var _this2 = this;
 
-      Echo.channel('user.game').listen('FetchQuestion', function (e) {
-        console.log(e.user);
-        console.log(e.question);
-        _this2.data = e.data;
-        _this2.question = e.data.question;
-        _this2.answers = e.data.answers;
-        _this2.count++;
-        _this2.difficulty = _this2.data.difficulty.name.charAt(0).toUpperCase() + _this2.data.difficulty.name.substring(1);
-
-        if (_this2.data.difficulty.name === 'easy') {
-          _this2.questionPoints = 1;
-        }
-
-        if (_this2.data.difficulty.name === 'medium') {
-          _this2.questionPoints = 2;
-        }
-
-        if (_this2.data.difficulty.name === 'hard') {
-          _this2.questionPoints = 3;
-        }
+      axios__WEBPACK_IMPORTED_MODULE_0___default.a.post('/api/question', {
+        question_id: this.data.id,
+        is_correct: false,
+        answer_id: 0,
+        points: parseInt('-' + this.questionPoints),
+        user_id: this.user.id,
+        count: this.count
+      }).then(function () {
+        _this2.countdown = 60; // this.countDownTimer()
       });
-      axios__WEBPACK_IMPORTED_MODULE_0___default.a.get('/api/question?user_id=' + this.user.id).then(function (response) {
-        _this2.data = response.data.data;
-        _this2.question = response.data.data.question;
-        _this2.answers = response.data.data.answers;
-        _this2.count++;
-        _this2.difficulty = _this2.data.difficulty.name.charAt(0).toUpperCase() + _this2.data.difficulty.name.substring(1);
 
-        if (_this2.data.difficulty.name === 'easy') {
-          _this2.questionPoints = 1;
-        }
+      if (this.count === 10) {
+        alert('You finished the quiz');
+        return window.location.href = '/dashboard';
+      }
 
-        if (_this2.data.difficulty.name === 'medium') {
-          _this2.questionPoints = 2;
-        }
-
-        if (_this2.data.difficulty.name === 'hard') {
-          _this2.questionPoints = 3;
-        }
-      });
+      this.fetchQuestion();
+    },
+    fetchQuestion: function fetchQuestion() {
+      console.log('fetchQuestion()...');
+      axios__WEBPACK_IMPORTED_MODULE_0___default.a.get('/api/question?user_id=' + this.user.id);
     },
     submit: function submit() {
+      var _this3 = this;
+
       if (!this.selectedAnswer) {
         alert('Chose an answer');
         return;
@@ -2012,12 +1999,45 @@ __webpack_require__.r(__webpack_exports__);
         points: this.selectedAnswer.is_correct ? this.questionPoints : parseInt('-' + this.questionPoints),
         user_id: this.user.id,
         count: this.count
-      }).then(function (response) {});
+      }).then(function () {
+        _this3.countdown = 10;
+      });
+      this.count++;
+
+      if (this.count === 10) {
+        alert('You successfully finished the quiz');
+        return window.location.href = '/dashboard';
+      }
     }
   },
   mounted: function mounted() {
+    var _this4 = this;
+
+    Echo.channel('quiz.' + this.user.id).listen('.newQuestion', function (e) {
+      console.log('fired');
+      console.log(e);
+      _event__WEBPACK_IMPORTED_MODULE_1__["default"].$emit('question_fetched', e);
+    });
     this.fetchQuestion();
-    this.countDownTimer();
+    _event__WEBPACK_IMPORTED_MODULE_1__["default"].$on('question_fetched', function (e) {
+      _this4.data = e.data;
+      _this4.question = e.data.question;
+      _this4.answers = e.data.answers; // this.count++;
+
+      _this4.difficulty = _this4.data.difficulty.name.charAt(0).toUpperCase() + _this4.data.difficulty.name.substring(1);
+
+      if (_this4.data.difficulty.name === 'easy') {
+        _this4.questionPoints = 1;
+      }
+
+      if (_this4.data.difficulty.name === 'medium') {
+        _this4.questionPoints = 2;
+      }
+
+      if (_this4.data.difficulty.name === 'hard') {
+        _this4.questionPoints = 3;
+      }
+    }); // this.countDownTimer()
   }
 });
 
@@ -47202,84 +47222,107 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "row" }, [
     _c("div", { staticClass: "col-11" }, [
-      _c("div", { staticClass: "card bg-success" }, [
-        _c("div", { staticClass: "card-header" }, [
-          _c("span", [_vm._v("Category: " + _vm._s(_vm.data.category.name))]),
-          _vm._v(" "),
-          _c("span", { staticStyle: { border: "10px" } }, [
+      _c("div", { staticClass: "card" }, [
+        _c(
+          "div",
+          {
+            staticClass: "card-header text-align: center",
+            staticStyle: { "font-weight": "bold" }
+          },
+          [
+            _c(
+              "span",
+              { staticStyle: { display: "inline-block", width: "45.5%" } },
+              [_vm._v("Category: " + _vm._s(_vm.data.category.name))]
+            ),
+            _vm._v(" "),
+            _c("span", [
+              _vm._v(
+                "\n                      Difficulty: " +
+                  _vm._s(_vm.difficulty) +
+                  "\n                "
+              )
+            ]),
+            _vm._v(" "),
+            _c(
+              "span",
+              { staticStyle: { display: "inline-block", float: "right" } },
+              [
+                _vm._v(
+                  "\n                Possible Points: " +
+                    _vm._s(_vm.questionPoints) +
+                    "\n                "
+                )
+              ]
+            )
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c(
+        "div",
+        { staticClass: "card", staticStyle: { "font-weight": "bold" } },
+        [
+          _c("div", { staticClass: "card-header" }, [
             _vm._v(
-              "\n                      Difficulty: " +
-                _vm._s(_vm.difficulty) +
-                "\n                "
+              "\n                Question " +
+                _vm._s(_vm.count) +
+                ": " +
+                _vm._s(_vm.question) +
+                "\n            "
             )
           ]),
           _vm._v(" "),
-          _c("span", { staticStyle: { float: "right" } }, [
-            _vm._v(
-              "\n                Points: " +
-                _vm._s(_vm.questionPoints) +
-                "\n            "
+          _c("div", { staticClass: "card-body" }, [
+            _c(
+              "ul",
+              { staticStyle: { "list-style": "none" } },
+              _vm._l(_vm.answers, function(answer) {
+                return _c("li", [
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model",
+                        value: _vm.selectedAnswer,
+                        expression: "selectedAnswer"
+                      }
+                    ],
+                    attrs: { type: "radio", name: "answer" },
+                    domProps: {
+                      value: answer,
+                      checked: _vm._q(_vm.selectedAnswer, answer)
+                    },
+                    on: {
+                      change: function($event) {
+                        _vm.selectedAnswer = answer
+                      }
+                    }
+                  }),
+                  _vm._v(
+                    "\n                        " +
+                      _vm._s(answer.answer) +
+                      "\n                    "
+                  )
+                ])
+              }),
+              0
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "card-footer" }, [
+            _c(
+              "button",
+              {
+                staticClass: "btn btn-outline-secondary btn-block",
+                staticStyle: { "font-weight": "bolder" },
+                on: { click: _vm.submit }
+              },
+              [_vm._v("\n                    Submit answer\n                ")]
             )
           ])
-        ])
-      ]),
-      _vm._v(" "),
-      _c("div", { staticClass: "card" }, [
-        _c("div", { staticClass: "card-header" }, [
-          _vm._v(
-            "\n                Question " +
-              _vm._s(_vm.count) +
-              ": " +
-              _vm._s(_vm.question) +
-              "\n            "
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "card-body" }, [
-          _c(
-            "ul",
-            { staticStyle: { "list-style": "none" } },
-            _vm._l(_vm.answers, function(answer) {
-              return _c("li", [
-                _c("input", {
-                  directives: [
-                    {
-                      name: "model",
-                      rawName: "v-model",
-                      value: _vm.selectedAnswer,
-                      expression: "selectedAnswer"
-                    }
-                  ],
-                  attrs: { type: "radio", name: "answer" },
-                  domProps: {
-                    value: answer,
-                    checked: _vm._q(_vm.selectedAnswer, answer)
-                  },
-                  on: {
-                    change: function($event) {
-                      _vm.selectedAnswer = answer
-                    }
-                  }
-                }),
-                _vm._v(
-                  "\n                        " +
-                    _vm._s(answer.answer) +
-                    "\n                    "
-                )
-              ])
-            }),
-            0
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "card-footer" }, [
-          _c(
-            "button",
-            { staticClass: "btn btn-success", on: { click: _vm.submit } },
-            [_vm._v("Submit answer")]
-          )
-        ])
-      ])
+        ]
+      )
     ]),
     _vm._v(" "),
     _c("div", { staticClass: "col-1" }, [
@@ -59525,9 +59568,9 @@ if (token) {
 window.Pusher = __webpack_require__(/*! pusher-js */ "./node_modules/pusher-js/dist/web/pusher.js");
 window.Echo = new laravel_echo__WEBPACK_IMPORTED_MODULE_0__["default"]({
   broadcaster: 'pusher',
-  key: "c496ce7c176b8865c599",
-  cluster: "eu",
-  encrypted: true
+  key: '4071074d8dda7e82070b',
+  cluster: 'eu',
+  forceTLS: true
 });
 
 /***/ }),
@@ -59670,6 +59713,22 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./resources/js/event.js":
+/*!*******************************!*\
+  !*** ./resources/js/event.js ***!
+  \*******************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue */ "./node_modules/vue/dist/vue.common.js");
+/* harmony import */ var vue__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vue__WEBPACK_IMPORTED_MODULE_0__);
+
+/* harmony default export */ __webpack_exports__["default"] = (new vue__WEBPACK_IMPORTED_MODULE_0___default.a());
+
+/***/ }),
+
 /***/ "./resources/sass/app.scss":
 /*!*********************************!*\
   !*** ./resources/sass/app.scss ***!
@@ -59688,8 +59747,8 @@ __webpack_require__.r(__webpack_exports__);
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(/*! C:\Users\User\game\resources\js\app.js */"./resources/js/app.js");
-module.exports = __webpack_require__(/*! C:\Users\User\game\resources\sass\app.scss */"./resources/sass/app.scss");
+__webpack_require__(/*! /Users/phil/workspace/kev.git/resources/js/app.js */"./resources/js/app.js");
+module.exports = __webpack_require__(/*! /Users/phil/workspace/kev.git/resources/sass/app.scss */"./resources/sass/app.scss");
 
 
 /***/ })

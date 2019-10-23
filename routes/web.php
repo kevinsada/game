@@ -16,7 +16,9 @@ Auth::routes(['verify' => true]);
 
 Route::group(['middleware' => ['auth', 'verified']], function () {
     Route::get('/home', 'HomeController@index')->name('home');
-    Route::get('/games', 'GamesController@index');
+    Route::get('/', function(){
+      return view ('games.index');
+    });
     Route::get('/show', 'QuestionController@show');
     Route::get('/quiz', function () {
         return view('games.quiz');
